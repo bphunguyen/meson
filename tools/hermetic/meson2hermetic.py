@@ -36,6 +36,7 @@ platform-sdk-version = 33
 
 import argparse
 import tomllib
+import enum
 import typing as T
 
 from typing import Any
@@ -56,6 +57,12 @@ if T.TYPE_CHECKING:
     class CMDOptions(SharedCMDOptions):
 
         configdir: str
+
+class DefaultCMDOptions(enum.Enum):
+    SOURCE_DIR = './'
+    BUILD_DIR = './'
+    CROSS_FILE = []
+    NATIVE_FILE = []
 
 class HermeticConfig:
     '''
@@ -110,7 +117,7 @@ class HermeticConfig:
     def project_options(self) -> list[str]:
         opts = []
         for key in self._meson_options:
-            opt = f'-D{key}={self._meson_options[key]}'
+            opt = f'{key}={self._meson_options[key]}'
             opts.append(opt)
         return opts
 
@@ -158,7 +165,23 @@ class HermeticCodeGenerator:
 
 
 def generate(hermetic_config: HermeticConfig, cmd_opts):
-    env = environment.Environment('./', './', cmd_opts)
+    env = environment.Environment(cmd_opts.sourcedir,
+                                  cmd_opts.builddir,
+                                  cmd_opts,)
+
+def create_default_options(args: argparse.Namespace) -> argparse.Namespace:
+    options = T.cast('CMDOptions', args)
+
+    # Configure option defaults
+    options.configdir = args.config
+    options.sourcedir = DefaultCMDOptions.SOURCE_DIR.value
+    options.builddir = DefaultCMDOptions.BUILD_DIR.value
+    options.cross_file = DefaultCMDOptions.CROSS_FILE.value
+    options.projectoptions = []
+    options.native_file = []
+    options.cmd_line_options = {}
+
+    return options
 
 def main():
     parser = argparse.ArgumentParser(description='Generates hermetic build files from meson')
@@ -167,11 +190,18 @@ def main():
                         help='The path to a valid config file (toml).',)
 
     args = parser.parse_args()
-    # options = T.cast('SharedCMDOptions', args)
-
     config = HermeticConfig(args.config)
-    # generate(config, options)
+
+    options = create_default_options(args)
+
+    # Add in our own configs/options
+    options.projectoptions = config.project_options()
+    coredata.parse_cmd_line_options(options)
+
+    generate(config, options)
+
     print(config)
+    print(options)
 
 
 if __name__ == '__main__':
