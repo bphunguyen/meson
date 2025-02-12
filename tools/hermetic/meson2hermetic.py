@@ -45,7 +45,8 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from mesonbuild.backend.hermeticbackend import HermeticState
-from mesonbuild import environment, coredata
+from mesonbuild import build, environment, coredata, interpreter
+from mesonbuild.options import OptionKey
 
 jinja_env = Environment(
     loader=FileSystemLoader(Path(__file__).parent.resolve() / 'templates/')
@@ -87,7 +88,7 @@ class HermeticConfig:
                 self._toml_data = data
                 self.parse_config_data()
         except Exception as e:
-            print('Error opening file:', e)
+            exit(f'Error trying to open config file:', e)
 
     
     @property
@@ -113,17 +114,17 @@ class HermeticConfig:
     @property
     def build_machine(self):
         return self._build_machine
+    
+    @property
+    def meson_options(self):
+        return self._meson_options
 
     def project_options(self) -> list[str]:
         opts = []
         for key in self._meson_options:
-            opt = f'{key}={self._meson_options[key]}'
+            opt = f'{key}={str(self._meson_options[key]).lower()}'
             opts.append(opt)
         return opts
-
-    def cmd_options(self):
-        pass
-
 
     def parse_config_data(self):
         project_config_dict = self._toml_data.get('project_config')
@@ -164,10 +165,26 @@ class HermeticCodeGenerator:
         raise NotImplementedError('Not implemented')
 
 
-def generate(hermetic_config: HermeticConfig, cmd_opts):
+def generate(config: HermeticConfig, cmd_opts: argparse.Namespace):
     env = environment.Environment(cmd_opts.sourcedir,
                                   cmd_opts.builddir,
                                   cmd_opts,)
+    
+    b = build.Build(env)
+
+    user_defined_options = T.cast('CMDOptions', argparse.Namespace(**vars(cmd_opts)))
+    d = {OptionKey.from_string(k): config.meson_options[k] for k in config.meson_options}
+    d.update(user_defined_options.cmd_line_options)
+    user_defined_options.cmd_line_options = d
+
+    intr = interpreter.Interpreter(b, user_defined_options=user_defined_options)
+
+    try:
+        intr.run()
+    except Exception as e:
+        raise e
+    
+    print(b)
 
 def create_default_options(args: argparse.Namespace) -> argparse.Namespace:
     options = T.cast('CMDOptions', args)
@@ -175,11 +192,13 @@ def create_default_options(args: argparse.Namespace) -> argparse.Namespace:
     # Configure option defaults
     options.configdir = args.config
     options.sourcedir = DefaultCMDOptions.SOURCE_DIR.value
-    options.builddir = DefaultCMDOptions.BUILD_DIR.value
+    options.builddir = './' # DefaultCMDOptions.BUILD_DIR.value
     options.cross_file = DefaultCMDOptions.CROSS_FILE.value
     options.projectoptions = []
     options.native_file = []
     options.cmd_line_options = {}
+    options.wipe = False
+    options.pager = False
 
     return options
 
@@ -197,11 +216,7 @@ def main():
     # Add in our own configs/options
     options.projectoptions = config.project_options()
     coredata.parse_cmd_line_options(options)
-
     generate(config, options)
-
-    print(config)
-    print(options)
 
 
 if __name__ == '__main__':
