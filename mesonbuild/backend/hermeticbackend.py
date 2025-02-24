@@ -39,7 +39,7 @@ class StaticLibrary:
         self.header_libs: list[str] = []
 
     def __str__(self):
-        return f'@SharedLibrary({self.name})'
+        return f'@StaticLibrary({self.name})'
 
 class SharedLibrary(StaticLibrary):
     """
