@@ -13,17 +13,57 @@ class HermeticState:
         self.genrules: list[Genrule] = []
         self.python_binary_hosts: list[PythonBinaryHost] = []
 
-class SharedLibrary:
-    pass
-
 class StaticLibrary:
-    pass
+    def __init__(self):
+        self.name: str = ''
+        self.dirs: list[str] = []
+        self.visibility: list[str] = []
+        self.srcs: list[str] = []
+        # In Bazel, these headers are one merged list.
+        self.generated_headers: list[str] = []
+        self.generated_sources: list[str] = []
+        # In Bazel, these c options are copts
+        self.copts: list[str] = []
+        self.cstd: str = ''
+        self.cpp_std: str = ''
+        self.conlyflags: list[str] = []
+        self.cppflags: list[str] = []
+
+        self.deps: list[str] = []
+        self.target_compatible_with: list[str] = []
+
+        self.local_include_dirs: list[str] = []
+        self.static_libs: list[str] = []
+        self.whole_static_libs: list[str] = []
+        self.shared_libs: list[str] = []
+        self.header_libs: list[str] = []
+
+    def __str__(self):
+        return f'@SharedLibrary({self.name})'
+
+class SharedLibrary(StaticLibrary):
+    """
+    Exactly same metadata as StaticLibrary besides how it's generated in Soong and Bazel files
+    """
+    def __str__(self):
+        return f'@SharedLibrary({self.name})'
 
 class Genrule:
-    pass
+    def __init__(self):
+        self.name: str = ''
+        self.srcs: list[str] = []
+        self.out: list[str] = []  # 'outs' in bazel
+        self.tools: list[str] = []
+        self.export_include_dirs: list[str] = []
+        self.cmd: str = ''
 
 class PythonBinaryHost:
-    pass
+    def __init__(self):
+        self.name: str = ''
+        self.srcs: list[str] = []
+        self.main: str = ''
+        self.imports: list[str] = []
+        self.version = {}
 
 class HermeticBackend(backends.Backend):
 
