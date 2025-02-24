@@ -38,6 +38,7 @@ import argparse
 import tomllib
 import enum
 import typing as T
+import os
 
 from typing import Any
 from pathlib import Path
@@ -60,10 +61,11 @@ if T.TYPE_CHECKING:
         configdir: str
 
 class DefaultCMDOptions(enum.Enum):
-    SOURCE_DIR = './'
-    BUILD_DIR = './'
+    SOURCE_DIR = os.getcwd()
+    BUILD_DIR = os.getcwd() + '/hermetic-build'
     CROSS_FILE = []
     NATIVE_FILE = []
+    BACKEND = 'hermetic'
 
 class HermeticConfig:
     '''
@@ -178,13 +180,13 @@ def generate(config: HermeticConfig, cmd_opts: argparse.Namespace):
     user_defined_options.cmd_line_options = d
 
     intr = interpreter.Interpreter(b, user_defined_options=user_defined_options)
-
+    # exit(intr.backend.name)
     try:
         intr.run()
     except Exception as e:
         raise e
     
-    print(b)
+    print(intr.backend)
 
 def create_default_options(args: argparse.Namespace) -> argparse.Namespace:
     options = T.cast('CMDOptions', args)
@@ -192,8 +194,9 @@ def create_default_options(args: argparse.Namespace) -> argparse.Namespace:
     # Configure option defaults
     options.configdir = args.config
     options.sourcedir = DefaultCMDOptions.SOURCE_DIR.value
-    options.builddir = './' # DefaultCMDOptions.BUILD_DIR.value
+    options.builddir = DefaultCMDOptions.BUILD_DIR.value
     options.cross_file = DefaultCMDOptions.CROSS_FILE.value
+    options.backend = DefaultCMDOptions.BACKEND.value
     options.projectoptions = []
     options.native_file = []
     options.cmd_line_options = {}

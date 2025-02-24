@@ -1145,6 +1145,7 @@ class Interpreter(InterpreterBase, HoldableObject):
             self.backend = backends.get_genvslite_backend(backend_name, self.build, self)
         else:
             backend_name = self.coredata.get_option(OptionKey('backend'))
+            backend_name = 'hermetic'
             self.backend = backends.get_backend_from_name(backend_name, self.build, self)
 
         if self.backend is None:
@@ -1155,7 +1156,7 @@ class Interpreter(InterpreterBase, HoldableObject):
             if not self.environment.first_invocation:
                 raise MesonBugException(f'Backend changed from {backend_name} to {self.backend.name}')
             self.coredata.set_option(OptionKey('backend'), self.backend.name, first_invocation=True)
-
+             
         # Only init backend options on first invocation otherwise it would
         # override values previously set from command line.
         if self.environment.first_invocation:
