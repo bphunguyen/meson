@@ -45,8 +45,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from mesonbuild.backend.hermeticbackend import HermeticState
-from mesonbuild import build, environment, coredata, interpreter, mlog
+from mesonbuild import build, environment, coredata, interpreter, mlog, hermeticbuild
 from mesonbuild.options import OptionKey
 
 jinja_env = Environment(
@@ -159,7 +158,7 @@ class HermeticCodeGenerator:
     '''
     Parent class for any class that generates code via jinja2 templates
     '''
-    def __init__(self, build_state: HermeticState):
+    def __init__(self, build_state: hermeticbuild.HermeticState):
         self._build_state = build_state
         self._path_to_template = Path(self._build_type.lower() + '/' + self._template_file_name)
 
@@ -167,7 +166,7 @@ class HermeticCodeGenerator:
         raise NotImplementedError('Not implemented')
 
 
-def render_build_file(hermetic_state: HermeticState, build_type = 'Soong'):
+def render_build_file(hermetic_state: hermeticbuild.HermeticState, build_type = 'Soong'):
     print(hermetic_state)
 
 
