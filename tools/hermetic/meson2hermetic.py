@@ -46,7 +46,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from mesonbuild.backend.hermeticbackend import HermeticState
-from mesonbuild import build, environment, coredata, interpreter
+from mesonbuild import build, environment, coredata, interpreter, mlog
 from mesonbuild.options import OptionKey
 
 jinja_env = Environment(
@@ -167,26 +167,31 @@ class HermeticCodeGenerator:
         raise NotImplementedError('Not implemented')
 
 
+def render_build_file(hermetic_state: HermeticState, build_type = 'Soong'):
+    print(hermetic_state)
+
+
 def generate(config: HermeticConfig, cmd_opts: argparse.Namespace):
     env = environment.Environment(cmd_opts.sourcedir,
                                   cmd_opts.builddir,
                                   cmd_opts,)
     
     b = build.Build(env)
-
     user_defined_options = T.cast('CMDOptions', argparse.Namespace(**vars(cmd_opts)))
     d = {OptionKey.from_string(k): config.meson_options[k] for k in config.meson_options}
     d.update(user_defined_options.cmd_line_options)
     user_defined_options.cmd_line_options = d
 
     intr = interpreter.Interpreter(b, user_defined_options=user_defined_options)
-    # exit(intr.backend.name)
+
     try:
+        print(f'Interpreting {cmd_opts.sourcedir}/meson.build ...')
         intr.run()
     except Exception as e:
         raise e
     
-    print(intr.backend)
+    hermetic_state = intr.backend.generate()
+    render_build_file(hermetic_state)
 
 def create_default_options(args: argparse.Namespace) -> argparse.Namespace:
     options = T.cast('CMDOptions', args)
@@ -213,6 +218,8 @@ def main():
 
     args = parser.parse_args()
     config = HermeticConfig(args.config)
+
+    mlog.set_quiet()
 
     options = create_default_options(args)
 
