@@ -13,6 +13,10 @@ class HermeticState:
         self.genrules: T.List[Genrule] = []
         self.python_binary_hosts: T.List[PythonBinaryHost] = []
 
+        # Global flags used amongst all Static/Shared Libraries
+        self.conlyflags: T.List[str] = []
+        self.cppflags: T.List[str] = []
+
 class HermeticStaticLibrary:
 
     def __init__(self):
@@ -44,7 +48,7 @@ class HermeticStaticLibrary:
         self.name = meson_sl.get_basename()
         self.srcs = [s.fname for s in meson_sl.sources]
         self.subdir = meson_sl.subdir
-        
+
         for include_dir in meson_sl.include_dirs:
             self.local_include_dirs.extend(include_dir.incdirs)
 
@@ -62,12 +66,12 @@ class HermeticStaticLibrary:
         self.cstd = meson_sl
 
         # DO NOT SUBMIT: Here for debugging purposes
-        if self.name == 'gtest':
+        if self.name == 'mesa_util':
             pprint.pp(self.srcs)
             pprint.pp(self.local_include_dirs)
             pprint.pp(self.generated_sources)
             pprint.pp(self.generated_headers)
-            print(meson_sl.subdir)
+            
 
     def __str__(self):
         return f'@StaticLibrary({self.name})'

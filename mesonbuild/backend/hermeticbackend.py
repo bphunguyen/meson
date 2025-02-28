@@ -2,6 +2,7 @@
 # Copyright 2025 The Meson development team
 
 import typing as T
+import pprint
 
 from . import backends
 from mesonbuild import build, hermeticbuild, interpreter
@@ -16,9 +17,16 @@ class HermeticBackend(backends.Backend):
         self.hermetic_state: hermeticbuild.HermeticState = hermeticbuild.HermeticState()
 
     def generate(self, capture: bool = False, vslite_ctx: T.Optional[T.Dict] = None) -> T.Optional[T.Dict]:
+        self._generate_c_and_cpp_flags()
         self._generate_static_libs()
+
         return self.hermetic_state
-    
+        
+
+    def _generate_c_and_cpp_flags(self):
+        self.hermetic_state.conlyflags.extend(self.build.projects_args.host['']['c'])
+        self.hermetic_state.cppflags.extend(self.build.projects_args.host['']['cpp'])
+
     def _generate_static_libs(self):
         static_libs = []
         targets = self.build.get_build_targets()
