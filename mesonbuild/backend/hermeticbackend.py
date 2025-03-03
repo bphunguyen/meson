@@ -3,6 +3,8 @@
 
 import typing as T
 
+from mesonbuild.options import OptionKey
+
 from . import backends
 from mesonbuild import build, hermeticbuild, interpreter
 
@@ -17,11 +19,14 @@ class HermeticBackend(backends.Backend):
 
     def generate(self, capture: bool = False, vslite_ctx: T.Optional[T.Dict] = None) -> T.Optional[T.Dict]:
         self._generate_c_and_cpp_flags()
+
+        self.hermetic_state.cstd = self.environment.coredata.get_option(OptionKey('c_std'))
+        self.hermetic_state.cpp_std = self.environment.coredata.get_option(OptionKey('cpp_std'))
+        
         self._generate_static_and_shared_libs()
         self._generate_custom_targets()
 
         return self.hermetic_state
-        
 
     def _generate_c_and_cpp_flags(self):
         self.hermetic_state.conlyflags.extend(self.build.projects_args.host['']['c'])
