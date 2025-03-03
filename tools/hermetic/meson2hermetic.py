@@ -3,7 +3,14 @@
 # Copyright 2024 Brandon Nguyen
 
 '''
-Converts meson build files to hermetic build system (Soong, Bazel)
+Converts meson build files to a hermetic build system (Soong, Bazel)
+Emits the hermetic build files directly in directory.
+
+Intended Usage:
+    Within the target directory run command:
+    ```
+    python ~/<path>/<to>/tools/hermetic/meson2hermetic.py --config=/path/to/aosp.toml
+    ```
 
 This scripts requires python 3.11 to run.
 
@@ -47,6 +54,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from mesonbuild import build, environment, coredata, interpreter, mlog, hermeticbuild
 from mesonbuild.options import OptionKey
+from mesonbuild.utils.universal import set_meson_command
 
 jinja_env = Environment(
     loader=FileSystemLoader(Path(__file__).parent.resolve() / 'templates/')
@@ -219,6 +227,10 @@ def main():
     config = HermeticConfig(args.config)
 
     mlog.set_quiet()
+
+    # meson command is not relevant to our script, but we have to set
+    # to bypass 'no command' error
+    set_meson_command('NULL')
 
     options = create_default_options(args)
 

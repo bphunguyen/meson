@@ -13,9 +13,23 @@ class HermeticState:
         self.genrules: T.List[Genrule] = []
         self.python_binary_hosts: T.List[PythonBinaryHost] = []
 
-        # Global flags used amongst all Static/Shared Libraries
+        # Global flags used amongst all Static/Shared Libraries in Soong
         self.conlyflags: T.List[str] = []
         self.cppflags: T.List[str] = []
+
+        # Bazel version of c/cpp flags
+        self.copts: T.List[str] = []
+
+        # TODO: Figure out where these project options are defined
+        self.cstd: str = ''
+        self.cpp_std: str = ''
+
+    def __str__(self):
+        return f'HermeticState:\n\tshared_libraries len: {len(self.shared_libraries)}' \
+            f'\n\tstatic_libraries len: {len(self.static_libraries)}' \
+            f'\n\tgenrules len: {len(self.genrules)}' \
+            f'\n\tpython_binary_hosts len: {len(self.python_binary_hosts)}'
+
 
 class HermeticStaticLibrary:
 
@@ -28,21 +42,17 @@ class HermeticStaticLibrary:
         # In Bazel, these headers are one merged list.
         self.generated_headers: T.List[str] = []
         self.generated_sources: T.List[str] = []
-        # In Bazel, these c options are copts
-        self.copts: T.List[str] = []
-        self.cstd: str = ''
-        self.cpp_std: str = ''
-        self.conlyflags: T.List[str] = []
-        self.cppflags: T.List[str] = []
 
+        # Bazel specific attributes
         self.deps: T.List[str] = []
         self.target_compatible_with: T.List[str] = []
 
+        # Soong specific attributes
         self.local_include_dirs: T.List[str] = []
         self.static_libs: T.List[str] = []
         self.whole_static_libs: T.List[str] = []
         self.shared_libs: T.List[str] = []
-        self.header_libs: T.List[str] = []
+        self.header_libs: T.List[str] = [] # TODO: Add dependency support in .toml config
 
     def convert_from_meson(self, meson_sl: build.StaticLibrary):
         self.name = meson_sl.get_basename()
@@ -50,7 +60,8 @@ class HermeticStaticLibrary:
         self.subdir = meson_sl.subdir
 
         for include_dir in meson_sl.include_dirs:
-            self.local_include_dirs.extend(include_dir.incdirs)
+            for dir in include_dir.incdirs:
+                self.local_include_dirs.append(f'{include_dir.curdir}/{dir}')
 
         # Removes any duplicates from the list of generated sources
         generated_sources: list[str] = list(set([source.name for source in meson_sl.get_generated_sources()]))
@@ -63,15 +74,16 @@ class HermeticStaticLibrary:
             else: # sources that don't end with any file extension
                 self.generated_sources.append(source)
 
-        self.cstd = meson_sl
+        for target in meson_sl.link_targets:
+            if isinstance(target, build.StaticLibrary):
+                self.static_libs.append(target.name)
+            elif isinstance(target, build.SharedLibrary):
+                self.shared_libs(target.name)
 
-        # DO NOT SUBMIT: Here for debugging purposes
-        if self.name == 'mesa_util':
-            pprint.pp(self.srcs)
-            pprint.pp(self.local_include_dirs)
-            pprint.pp(self.generated_sources)
-            pprint.pp(self.generated_headers)
-            
+        for target in meson_sl.link_whole_targets:
+            if isinstance(target, build.StaticLibrary):
+                self.static_libs.append(target.name)
+
 
     def __str__(self):
         return f'@StaticLibrary({self.name})'
@@ -92,6 +104,9 @@ class Genrule:
         self.tools: T.List[str] = []
         self.export_include_dirs: T.List[str] = []
         self.cmd: str = ''
+
+    def convert_from_meson(self, custom_target: build.CustomTarget):
+        pass
 
 class PythonBinaryHost:
 

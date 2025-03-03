@@ -20,9 +20,9 @@ genrule {
   ],
   {% if export %}
    export_include_dirs: [
-       {% for export_include_dir in export_include_dirs %}
+       {%- for export_include_dir in export_include_dirs %}
          "{{ export_include_dir }}",
-       {% endfor %}
+       {%- endfor %}
      ],
   {% endif %}
   cmd: "{{ cmd }}"

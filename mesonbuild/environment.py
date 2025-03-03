@@ -874,8 +874,7 @@ class Environment:
     def get_build_command(unbuffered: bool = False) -> T.List[str]:
         cmd = mesonlib.get_meson_command()
         if cmd is None:
-            # raise MesonBugException('No command?')
-            return ['/usr/bin/python', '/usr/local/google/home/bpnguyen/meson/meson/meson.py']
+            raise MesonBugException('No command?')
         cmd = cmd.copy()
         if unbuffered and 'python' in os.path.basename(cmd[0]):
             cmd.insert(1, '-u')
