@@ -2,6 +2,10 @@
 # Copyright 2025 The Meson development team
 import typing as T
 import pprint
+import os
+
+from mesonbuild.utils import universal
+from mesonbuild.utils.core import MesonException
 
 from . import build
 
@@ -10,25 +14,24 @@ class HermeticState:
     def __init__(self):
         self.shared_libraries: T.List[HermeticSharedLibrary] = []
         self.static_libraries: T.List[HermeticStaticLibrary] = []
-        self.genrules: T.List[Genrule] = []
-        self.python_binary_hosts: T.List[PythonBinaryHost] = []
+        self.custom_targets: T.List[HermeticCustomTarget] = []
+        self.python_targets: T.List[HermeticPythonTarget] = []
 
-        # Global flags used amongst all Static/Shared Libraries in Soong
+        # Global flags used amongst all Static/Shared Libraries
         self.conlyflags: T.List[str] = []
         self.cppflags: T.List[str] = []
 
-        # Bazel version of c/cpp flags
-        self.copts: T.List[str] = []
-
-        # TODO: Figure out where these project options are defined
         self.cstd: str = ''
         self.cpp_std: str = ''
+
+    def copts(self):
+        pass
 
     def __str__(self):
         return f'HermeticState:\n\tshared_libraries len: {len(self.shared_libraries)}' \
             f'\n\tstatic_libraries len: {len(self.static_libraries)}' \
-            f'\n\tgenrules len: {len(self.genrules)}' \
-            f'\n\tpython_binary_hosts len: {len(self.python_binary_hosts)}'
+            f'\n\tcustom_targets len: {len(self.custom_targets)}' \
+            f'\n\tpython_targets len: {len(self.python_targets)}'
 
 
 class HermeticStaticLibrary:
@@ -65,7 +68,7 @@ class HermeticStaticLibrary:
 
         # Removes any duplicates from the list of generated sources
         generated_sources: list[str] = list(set([source.name for source in meson_sl.get_generated_sources()]))
-        
+
         for source in generated_sources:
             if source.endswith('.h') and source not in self.generated_headers:
                 self.generated_headers.append(source)
@@ -95,7 +98,7 @@ class HermeticSharedLibrary(HermeticStaticLibrary):
     def __str__(self):
         return f'@SharedLibrary({self.name})'
 
-class Genrule:
+class HermeticCustomTarget:
 
     def __init__(self):
         self.name: str = ''
@@ -103,12 +106,38 @@ class Genrule:
         self.out: T.List[str] = []  # 'outs' in bazel
         self.tools: T.List[str] = []
         self.export_include_dirs: T.List[str] = []
-        self.cmd: str = ''
 
     def convert_from_meson(self, custom_target: build.CustomTarget):
-        pass
+        self.name = custom_target.name
 
-class PythonBinaryHost:
+        for src in custom_target.sources:
+            if isinstance(src, (universal.File)):
+                self.srcs.append(src.fname)
+            else:
+                # TODO: handle all other possible types
+                raise MesonException(f'Type: {type(src)} not handled, exiting...')
+        
+        for out in custom_target.outputs:
+            self.out.append(out)
+
+        program_args = self.srcs + self.out
+        python_script = ''
+
+        if len(custom_target.command) != 0 and custom_target.command[0].endswith('.py'):
+            python_script = custom_target.command[0]
+        else:
+            for arg in program_args:
+                if arg.endswith('.py'):
+                    python_script = arg
+                    break
+        
+        if python_script:
+            python_script_target_name = self.name + '_' + os.path.basename(python_script)
+            self.tools.append(python_script_target_name)
+
+        self.export_include_dirs.append(custom_target.subdir)
+
+class HermeticPythonTarget(HermeticCustomTarget):
 
     def __init__(self):
         self.name: str = ''
@@ -116,3 +145,7 @@ class PythonBinaryHost:
         self.main: str = ''
         self.imports: T.List[str] = []
         self.version: T.Dict[T.Any, T.Any] = {}
+
+    def convert_from_meson(self, custom_target: build.CustomTarget):
+        pass
+    

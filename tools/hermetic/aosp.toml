@@ -8,18 +8,12 @@ build = 'Soong'
 name = 'android_aarch64_drivers'
 
 [project_config.host_machine]
+build_machine = 'linux'
+host_machine = 'android'
 cpu_family = 'aarch64'
 cpu = 'aarch64'
-host_machine = 'android'
-build_machine = 'linux'
 
 [project_config.meson_options]
 vulkan-drivers="gfxstream" 
 gallium-drivers="" 
 opengl=false
-# platforms = 'android'
-# android-libbacktrace = 'disabled'
-# gallium-drivers = ''
-# vulkan-drivers = 'freedreno,gfxstream'
-# freedreno-kmds = 'kgsl'
-# platform-sdk-version = 33

@@ -184,6 +184,10 @@ def generate(config: HermeticConfig, cmd_opts: argparse.Namespace):
                                   cmd_opts,)
     
     b = build.Build(env)
+
+    if env.is_cross_build():
+        print('Building with cross compilation configurations...')
+
     user_defined_options = T.cast('CMDOptions', argparse.Namespace(**vars(cmd_opts)))
     d = {OptionKey.from_string(k): config.meson_options[k] for k in config.meson_options}
     d.update(user_defined_options.cmd_line_options)

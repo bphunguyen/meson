@@ -22,7 +22,7 @@ class HermeticBackend(backends.Backend):
 
         self.hermetic_state.cstd = self.environment.coredata.get_option(OptionKey('c_std'))
         self.hermetic_state.cpp_std = self.environment.coredata.get_option(OptionKey('cpp_std'))
-        
+
         self._generate_static_and_shared_libs()
         self._generate_custom_targets()
 
@@ -60,7 +60,7 @@ class HermeticBackend(backends.Backend):
         targets = self.build.get_custom_targets()
         for target in targets:
             custom_target = targets[target]
-            genrule = hermeticbuild.Genrule()
-            genrule.convert_from_meson(custom_target)
+            hermetic_ct = hermeticbuild.HermeticCustomTarget()
+            hermetic_ct.convert_from_meson(custom_target)
 
-            self.hermetic_state.genrules.append(genrule)
+            self.hermetic_state.custom_targets.append(hermetic_ct)
