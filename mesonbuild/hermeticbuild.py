@@ -93,9 +93,9 @@ class HermeticStaticLibrary:
         return f'@StaticLibrary({self.name})'
 
 class HermeticSharedLibrary(HermeticStaticLibrary):
-    """
+    '''
     Exactly same metadata as StaticLibrary besides how it's generated in Soong and Bazel files
-    """
+    '''
     def __str__(self):
         return f'@SharedLibrary({self.name})'
 
@@ -141,15 +141,18 @@ class HermeticCustomTarget:
         self.export_include_dirs.append(custom_target.subdir)
 
     def emit_python_target(self) -> T.Union[HermeticPythonTarget, None]:
-        """
+        '''
         Not all custom targets have valid python targets.
         Function may return None for those cases.
-        """
+        '''
         if not self.python_script:
             return None
         
         python_custom_target = HermeticPythonTarget(self)
         return python_custom_target
+    
+    def __str__(self):
+        return f'HermeticCustomTarget({self.name})'
 
 class HermeticPythonTarget(HermeticCustomTarget):
 
@@ -172,3 +175,6 @@ class HermeticPythonTarget(HermeticCustomTarget):
 
         self.out = custom_target.out.copy()
         self.export_include_dirs = custom_target.export_include_dirs.copy()
+
+    def __str__(self):
+        return f'HermeticPythonTarget({self.name})'
