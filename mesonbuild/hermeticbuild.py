@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2025 The Meson development team
+from __future__ import annotations
+
 import typing as T
-import pprint
 import os
 
 from mesonbuild.utils import universal
@@ -57,7 +58,7 @@ class HermeticStaticLibrary:
         self.shared_libs: T.List[str] = []
         self.header_libs: T.List[str] = [] # TODO: Add dependency support in .toml config
 
-    def convert_from_meson(self, meson_sl: build.StaticLibrary):
+    def convert_from_meson(self, meson_sl: build.StaticLibrary) -> None:
         self.name = meson_sl.get_basename()
         self.srcs = [s.fname for s in meson_sl.sources]
         self.subdir = meson_sl.subdir
@@ -107,7 +108,10 @@ class HermeticCustomTarget:
         self.tools: T.List[str] = []
         self.export_include_dirs: T.List[str] = []
 
-    def convert_from_meson(self, custom_target: build.CustomTarget):
+        self.python_script = ''
+        self.python_script_target_name = ''
+
+    def convert_from_meson(self, custom_target: build.CustomTarget) -> None:
         self.name = custom_target.name
 
         for src in custom_target.sources:
@@ -121,31 +125,50 @@ class HermeticCustomTarget:
             self.out.append(out)
 
         program_args = self.srcs + self.out
-        python_script = ''
 
         if len(custom_target.command) != 0 and custom_target.command[0].endswith('.py'):
-            python_script = custom_target.command[0]
+            self.python_script = custom_target.command[0]
         else:
             for arg in program_args:
                 if arg.endswith('.py'):
-                    python_script = arg
+                    self.python_script = arg
                     break
         
-        if python_script:
-            python_script_target_name = self.name + '_' + os.path.basename(python_script)
-            self.tools.append(python_script_target_name)
+        if self.python_script:
+            self.python_script_target_name = self.name + '_' + os.path.basename(self.python_script)
+            self.tools.append(self.python_script_target_name)
 
         self.export_include_dirs.append(custom_target.subdir)
+
+    def emit_python_target(self) -> T.Union[HermeticPythonTarget, None]:
+        """
+        Not all custom targets have valid python targets.
+        Function may return None for those cases.
+        """
+        if not self.python_script:
+            return None
+        
+        python_custom_target = HermeticPythonTarget(self)
+        return python_custom_target
 
 class HermeticPythonTarget(HermeticCustomTarget):
 
     def __init__(self):
-        self.name: str = ''
-        self.srcs: T.List[str] = []
         self.main: str = ''
         self.imports: T.List[str] = []
         self.version: T.Dict[T.Any, T.Any] = {}
+        self.libs: T.List[str] = []
 
-    def convert_from_meson(self, custom_target: build.CustomTarget):
-        pass
-    
+    def __init__(self, custom_target: HermeticCustomTarget = None):
+        super().__init__()
+        if custom_target is None:
+            return
+        
+        self.main = custom_target.python_script
+        self.name = custom_target.python_script_target_name
+        
+        self.srcs = [t for t in custom_target.srcs.copy() if t.endswith('.py')]
+        self.imports = [os.path.dirname(t) for t in custom_target.srcs.copy() if t.endswith('.py')]
+
+        self.out = custom_target.out.copy()
+        self.export_include_dirs = custom_target.export_include_dirs.copy()

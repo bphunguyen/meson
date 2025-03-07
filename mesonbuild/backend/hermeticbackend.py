@@ -64,3 +64,8 @@ class HermeticBackend(backends.Backend):
             hermetic_ct.convert_from_meson(custom_target)
 
             self.hermetic_state.custom_targets.append(hermetic_ct)
+
+            python_target = hermetic_ct.emit_python_target()
+
+            if python_target:
+                self.hermetic_state.python_targets.append(python_target)
