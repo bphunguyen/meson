@@ -42,14 +42,11 @@ class HermeticBackend(backends.Backend):
 
         for flag in self.build.projects_args.host['']['cpp']:
             if '"' in flag:
-                    # Makes flags that use "" work when generated in a hermetic build system
-                    # End result of a a flag like "-DPACKAGE_VERSION="24.3.0-devel"" -> "-DPACKAGE_VERSION=\"24.3.0-devel\""
-                    # When generating
                     clean_flag = flag.replace('"', r'\"')
                     self.hermetic_state.cppflags.append(clean_flag)
             else:
                 self.hermetic_state.cppflags.append(flag)
-                
+
 
     def _generate_static_and_shared_libs(self):
         static_libs = []

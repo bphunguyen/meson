@@ -206,12 +206,28 @@ class HermeticCodeGenerator:
             with open(f'{os.getcwd()}/{subdir}/{BUILD_FILES[self._config.build.lower()]}', 'w') as f:
                 print(f'Generating {subdir}/{BUILD_FILES[self._config.build.lower()]}')
                 for target in subdirs[subdir]:
-                    if isinstance(target, hermeticbuild.HermeticStaticLibrary):
+                    rendered_lib = ''
+                    if isinstance(target, hermeticbuild.HermeticStaticLibrary) \
+                        and not isinstance(target, hermeticbuild.HermeticSharedLibrary):
                         rendered_lib = static_library_template.render(
                             **vars(target),
                             **vars(self._build_state),
                         )
-                        f.write(rendered_lib)
+                    elif isinstance(target, hermeticbuild.HermeticSharedLibrary):
+                        rendered_lib = shared_library_template.render(
+                            **vars(target),
+                            **vars(self._build_state)
+                        )
+                    elif isinstance(target, hermeticbuild.HermeticCustomTarget) \
+                        and not isinstance(target, hermeticbuild.HermeticPythonTarget):
+                        rendered_lib = custom_target_template.render(
+                            **vars(target),
+                        )
+                    elif isinstance(target, hermeticbuild.HermeticPythonTarget):
+                        rendered_lib = python_target_template.render(
+                            **vars(target),
+                        )
+                    f.write('\n' + rendered_lib)
 
 
 
