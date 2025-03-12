@@ -10,6 +10,7 @@ from mesonbuild.utils.core import MesonException
 
 from . import build
 
+
 class HermeticState:
 
     def __init__(self):
@@ -22,7 +23,7 @@ class HermeticState:
         self.conlyflags: T.List[str] = []
         self.cppflags: T.List[str] = []
 
-        self.cstd: str = ''
+        self.c_std: str = ''
         self.cpp_std: str = ''
 
     def copts(self):
@@ -40,6 +41,7 @@ class HermeticStaticLibrary:
     def __init__(self):
         self.name: str = ''
         self.subdir: str = '' # Location of this StaticLibrary's definition
+        self.host_supported: str = 'false'
         self.dirs: T.List[str] = []
         self.visibility: T.List[str] = []
         self.srcs: T.List[str] = []
@@ -61,8 +63,9 @@ class HermeticStaticLibrary:
         self.srcs = [s.fname for s in meson_sl.sources]
         self.subdir = meson_sl.subdir
         self.deps = [d.name for d in meson_sl.get_dependencies()]
-        
+
         for include_dir in meson_sl.include_dirs:
+            self.local_include_dirs.append(include_dir.curdir)
             for dir in include_dir.incdirs:
                 self.local_include_dirs.append(f'{include_dir.curdir}/{dir}')
 

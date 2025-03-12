@@ -1,6 +1,6 @@
-{# Copyright © 2024 Google Inc.
+{#- Copyright © 2024 Google Inc.
    SPDX-License-Identifier: Apache-2.0
-#}
+-#}
 cc_library_static {
     name: "{{ name }}",
     host_supported: {{ host_supported }},
@@ -19,10 +19,10 @@ cc_library_static {
         "{{ generated }}",
     {%- endfor %}
     ],
-    c_std: "{{ c_std_val }}",
-    cpp_std: "{{ cpp_std_val }}",
+    c_std: "{{ c_std }}",
+    cpp_std: "{{ cpp_std }}",
     conlyflags: [
-    {%- for arg in cflags %}
+    {%- for arg in conlyflags %}
         "{{ arg }}",
     {%- endfor %}
     ],
@@ -32,7 +32,7 @@ cc_library_static {
     {%- endfor %}
     ],
     local_include_dirs: [
-    {%- for inc in include_directories %}
+    {%- for inc in local_include_dirs %}
         "{{ inc }}",
     {%- endfor %}
     ],

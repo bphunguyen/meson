@@ -2,6 +2,7 @@
 # Copyright 2025 The Meson development team
 
 import typing as T
+import pprint
 
 from mesonbuild.options import OptionKey
 
@@ -20,7 +21,7 @@ class HermeticBackend(backends.Backend):
     def generate(self, capture: bool = False, vslite_ctx: T.Optional[T.Dict] = None) -> T.Optional[T.Dict]:
         self._generate_c_and_cpp_flags()
 
-        self.hermetic_state.cstd = self.environment.coredata.get_option(OptionKey('c_std'))
+        self.hermetic_state.c_std = self.environment.coredata.get_option(OptionKey('c_std'))
         self.hermetic_state.cpp_std = self.environment.coredata.get_option(OptionKey('cpp_std'))
 
         self._generate_static_and_shared_libs()
@@ -29,8 +30,26 @@ class HermeticBackend(backends.Backend):
         return self.hermetic_state
 
     def _generate_c_and_cpp_flags(self):
-        self.hermetic_state.conlyflags.extend(self.build.projects_args.host['']['c'])
-        self.hermetic_state.cppflags.extend(self.build.projects_args.host['']['cpp'])
+        for flag in self.build.projects_args.host['']['c']:
+            if '"' in flag:
+                # Makes flags that use "" work when generated in a hermetic build system
+                # End result of a a flag like "-DPACKAGE_VERSION="24.3.0-devel"" -> "-DPACKAGE_VERSION=\"24.3.0-devel\""
+                # When generating
+                clean_flag = flag.replace('"', r'\"')
+                self.hermetic_state.conlyflags.append(clean_flag)
+            else:
+                self.hermetic_state.conlyflags.append(flag)
+
+        for flag in self.build.projects_args.host['']['cpp']:
+            if '"' in flag:
+                    # Makes flags that use "" work when generated in a hermetic build system
+                    # End result of a a flag like "-DPACKAGE_VERSION="24.3.0-devel"" -> "-DPACKAGE_VERSION=\"24.3.0-devel\""
+                    # When generating
+                    clean_flag = flag.replace('"', r'\"')
+                    self.hermetic_state.cppflags.append(clean_flag)
+            else:
+                self.hermetic_state.cppflags.append(flag)
+                
 
     def _generate_static_and_shared_libs(self):
         static_libs = []

@@ -20,7 +20,7 @@ Dependencies Used:
 config file format example:
 
 # aosp.toml
-build = 'Soong'
+build = 'soong'
 
 [project_config]
 name = 'android_aarch64_drivers'
@@ -58,9 +58,16 @@ from mesonbuild.envconfig import MachineInfo
 from mesonbuild.options import OptionKey
 from mesonbuild.utils.universal import set_meson_command
 
+HermeticTarget = hermeticbuild.HermeticStaticLibrary | hermeticbuild.HermeticSharedLibrary \
+    | hermeticbuild.HermeticCustomTarget | hermeticbuild.HermeticPythonTarget
+
 jinja_env = Environment(
-    loader=FileSystemLoader(Path(__file__).parent.resolve() / 'templates/')
+    loader=FileSystemLoader(Path(__file__).parent.resolve() / 'hermetic_templates/')
 )
+
+BUILD_FILES = {
+    'soong': 'Android.bp',
+}
 
 if T.TYPE_CHECKING:
     from mesonbuild.coredata import SharedCMDOptions
@@ -169,16 +176,44 @@ class HermeticCodeGenerator:
     '''
     Parent class for any class that generates code via jinja2 templates
     '''
-    def __init__(self, build_state: hermeticbuild.HermeticState):
+    def __init__(self, build_state: hermeticbuild.HermeticState, config: HermeticConfig):
         self._build_state = build_state
-        self._path_to_template = Path(self._build_type.lower() + '/' + self._template_file_name)
+        self._config = config
 
-    def render(self) -> str:
-        raise NotImplementedError('Not implemented')
+    def render_build_file(self):
+        # Categorize all targets into their subdirs before generating a file for each directory
+        subdirs: dict[str, list[HermeticTarget]] = {}
+
+        def organize_libs(library: list[HermeticTarget]):
+            for lib in library:
+                subdir = lib.subdir
+                if subdirs.get(subdir):
+                    subdirs.get(subdir).append(lib)
+                else:
+                    subdirs[subdir] = [lib]
+
+        organize_libs(self._build_state.static_libraries)
+        organize_libs(self._build_state.shared_libraries)
+        organize_libs(self._build_state.custom_targets)
+        organize_libs(self._build_state.python_targets)
+
+        static_library_template = jinja_env.get_template(f'{self._config.build}/static_library.txt')
+        shared_library_template = jinja_env.get_template(f'{self._config.build}/shared_library.txt')
+        custom_target_template = jinja_env.get_template(f'{self._config.build}/custom_target.txt')
+        python_target_template = jinja_env.get_template(f'{self._config.build}/python_target.txt')
+
+        for subdir in subdirs:
+            with open(f'{os.getcwd()}/{subdir}/{BUILD_FILES[self._config.build.lower()]}', 'w') as f:
+                print(f'Generating {subdir}/{BUILD_FILES[self._config.build.lower()]}')
+                for target in subdirs[subdir]:
+                    if isinstance(target, hermeticbuild.HermeticStaticLibrary):
+                        rendered_lib = static_library_template.render(
+                            **vars(target),
+                            **vars(self._build_state),
+                        )
+                        f.write(rendered_lib)
 
 
-def render_build_file(hermetic_state: hermeticbuild.HermeticState, build_type = 'Soong'):
-    print(hermetic_state)
 
 
 def generate(config: HermeticConfig, cmd_opts: argparse.Namespace):
@@ -213,7 +248,9 @@ def generate(config: HermeticConfig, cmd_opts: argparse.Namespace):
         raise e
     
     hermetic_state = intr.backend.generate()
-    render_build_file(hermetic_state)
+    generator = HermeticCodeGenerator(hermetic_state, config)
+
+    generator.render_build_file()
 
 def create_default_options(args: argparse.Namespace) -> argparse.Namespace:
     options = T.cast('CMDOptions', args)

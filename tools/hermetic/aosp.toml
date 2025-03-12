@@ -1,6 +1,6 @@
 # Copyright 2024 Brandon Nguyen
 # SPDX-License-Identifier: Apache-2.0
-build = 'Soong'
+build = 'soong'
 
 # Base project config which contain shared attributes which
 # all other projects must contain / override
