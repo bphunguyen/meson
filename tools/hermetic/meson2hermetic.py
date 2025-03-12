@@ -46,6 +46,7 @@ import tomllib
 import enum
 import typing as T
 import os
+import pprint
 
 from typing import Any
 from pathlib import Path
@@ -53,6 +54,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from mesonbuild import build, environment, coredata, interpreter, mlog, hermeticbuild
+from mesonbuild.envconfig import MachineInfo
 from mesonbuild.options import OptionKey
 from mesonbuild.utils.universal import set_meson_command
 
@@ -85,10 +87,9 @@ class HermeticConfig:
         # project_config
         self._project_name: str = ''
         # project_config.host_machine
-        self._cpu_family: str = ''
-        self._cpu: str = ''
-        self._host_machine: str = ''
-        self._build_machine: str = ''
+        self._host_machine: dict[str, str] = {}
+        self._build_machine: dict[str, str] = {}
+        self._target_machine: dict[str, str] = {}
         # project_config.meson_options
         self._meson_options: dict[str, int | bool | str] = {}
         try:
@@ -109,20 +110,16 @@ class HermeticConfig:
         return self._project_name
     
     @property
-    def cpu_family(self):
-        return self._cpu_family
-    
-    @property
-    def cpu(self):
-        return self._cpu
-    
-    @property
-    def host_machine(self):
+    def host_machine(self) -> dict[str, str]:
         return self._host_machine
     
     @property
-    def build_machine(self):
+    def build_machine(self) -> dict[str, str]:
         return self._build_machine
+    
+    @property
+    def target_machine(self) -> dict[str, str]:
+        return self._target_machine
     
     @property
     def meson_options(self):
@@ -139,10 +136,16 @@ class HermeticConfig:
         project_config_dict = self._toml_data.get('project_config')
         self._build = self._toml_data.get('build')
         self._project_name = project_config_dict.get('name')
-        self._cpu_family = project_config_dict.get('host_machine').get('cpu_family')
-        self._cpu = project_config_dict.get('host_machine').get('cpu')
-        self._host_machine = project_config_dict.get('host_machine').get('host_machine')
-        self._build_machine = project_config_dict.get('host_machine').get('build_machine')
+
+        if project_config_dict.get('host_machine'):
+            self._host_machine = project_config_dict.get('host_machine')
+
+        if project_config_dict.get('build_machine'):
+            self._host_machine = project_config_dict.get('host_machine')
+
+        if project_config_dict.get('target_machine'):
+            self._host_machine = project_config_dict.get('host_machine')
+
         self._meson_options = project_config_dict.get('meson_options')
         for key in self._meson_options:
             setattr(self, key, self._meson_options[key])
@@ -183,8 +186,16 @@ def generate(config: HermeticConfig, cmd_opts: argparse.Namespace):
                                   cmd_opts.builddir,
                                   cmd_opts,)
     
-    b = build.Build(env)
+    # Override native compiler options
+    # if config.host_machine:
+    #     env.machines.host = MachineInfo.from_literal(config.host_machine)
+    # if config.build_machine:
+    #     env.machines.build = MachineInfo.from_literal(config.build_machine)
+    # if config.target_machine:
+    #     env.machines.target = MachineInfo.from_literal(config.target_machine)
 
+    b = build.Build(env)
+    
     if env.is_cross_build():
         print('Building with cross compilation configurations...')
 

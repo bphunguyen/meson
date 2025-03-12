@@ -7,11 +7,20 @@ build = 'Soong'
 [project_config]
 name = 'android_aarch64_drivers'
 
+# minimum_literal = {'cpu', 'cpu_family', 'endian', 'system'}
 [project_config.host_machine]
-build_machine = 'linux'
-host_machine = 'android'
-cpu_family = 'aarch64'
 cpu = 'aarch64'
+cpu_family = 'aarch64'
+system = 'android'
+endian = 'little'
+
+# If host/build machine are empty, the script will default to the native
+# machine specs
+[project_config.build_machine]
+# cpu = 'aarch64'
+# cpu_family = 'aarch64'
+# system = 'linux'
+# endian = 'little'
 
 [project_config.meson_options]
 vulkan-drivers="gfxstream" 

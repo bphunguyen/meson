@@ -43,15 +43,13 @@ class HermeticStaticLibrary:
         self.dirs: T.List[str] = []
         self.visibility: T.List[str] = []
         self.srcs: T.List[str] = []
-        # In Bazel, these headers are one merged list.
+
         self.generated_headers: T.List[str] = []
         self.generated_sources: T.List[str] = []
 
-        # Bazel specific attributes
         self.deps: T.List[str] = []
         self.target_compatible_with: T.List[str] = []
 
-        # Soong specific attributes
         self.local_include_dirs: T.List[str] = []
         self.static_libs: T.List[str] = []
         self.whole_static_libs: T.List[str] = []
@@ -62,7 +60,8 @@ class HermeticStaticLibrary:
         self.name = meson_sl.get_basename()
         self.srcs = [s.fname for s in meson_sl.sources]
         self.subdir = meson_sl.subdir
-
+        self.deps = [d.name for d in meson_sl.get_dependencies()]
+        
         for include_dir in meson_sl.include_dirs:
             for dir in include_dir.incdirs:
                 self.local_include_dirs.append(f'{include_dir.curdir}/{dir}')
@@ -103,6 +102,7 @@ class HermeticCustomTarget:
 
     def __init__(self):
         self.name: str = ''
+        self.subdir: str = ''
         self.srcs: T.List[str] = []
         self.out: T.List[str] = []  # 'outs' in bazel
         self.tools: T.List[str] = []
@@ -113,6 +113,7 @@ class HermeticCustomTarget:
 
     def convert_from_meson(self, custom_target: build.CustomTarget) -> None:
         self.name = custom_target.name
+        self.subdir = custom_target.subdir
 
         for src in custom_target.sources:
             if isinstance(src, (universal.File)):
@@ -169,6 +170,7 @@ class HermeticPythonTarget(HermeticCustomTarget):
         
         self.main = custom_target.python_script
         self.name = custom_target.python_script_target_name
+        self.subdir = custom_target.subdir
         
         self.srcs = [t for t in custom_target.srcs.copy() if t.endswith('.py')]
         self.imports = [os.path.dirname(t) for t in custom_target.srcs.copy() if t.endswith('.py')]
