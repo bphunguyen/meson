@@ -9,8 +9,8 @@ genrule {
   {%- endfor %}
   ],
   out: [
-  {%- for out in outs %}
-    "{{ out }}",
+  {%- for o in out %}
+    "{{ o }}",
   {%- endfor %}
   ],
   tools: [
@@ -18,12 +18,12 @@ genrule {
     "{{ tool }}",
   {%- endfor %}
   ],
-  {% if export %}
+  {%- if export_include_dirs|length >= 1 %}
   export_include_dirs: [
-      {%- for export_include_dir in export_include_dirs %}
-        "{{ export_include_dir }}",
-      {%- endfor %}
-    ],
-  {% endif %}
+  {%- for export_include_dir in export_include_dirs %}
+    "{{ export_include_dir }}",
+  {%- endfor %}
+  ],
+  {%- endif %}
   cmd: "{{ cmd }}"
 }
